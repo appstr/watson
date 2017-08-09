@@ -3,4 +3,7 @@ Rails.application.routes.draw do
   root to: 'home#welcome'
 
   resources :users
+
+  get '/ask_questions', to: 'questions#ask_questions', as: :ask_questions
+  post '/submit_questions', to: 'questions#submit_questions', as: :submit_questions
 end

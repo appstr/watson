@@ -1,0 +1,23 @@
+<%= render partial: "shared/nav_bar" %>
+
+<div class="container">
+  <div class="row text-center">
+    <div class="col-xs-12">
+      <h1>Watson Questions</h1>
+    </div>
+  </div>
+  <div class="row text-center">
+    <div class="col-xs-12">
+      <%= form_tag({controller:"questions", action:"submit_questions"}) do %>
+        <% @questions.each do |k, v| %>
+          <%= label_tag "question_#{k}".to_sym, v %>
+          <br />
+          <%= text_area_tag "question_#{k}".to_sym %>
+          <br />
+          <br />
+        <% end %>
+        <%= submit_tag :submit, class:"btn-success btn-lg" %>
+      <% end %>
+    </div>
+  </div>
+</div>
