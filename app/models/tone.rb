@@ -14,7 +14,7 @@ class Tone < ApplicationRecord
   }
 
   SOCIAL_ENUM = {
-    1 => "oppenness",
+    1 => "openness",
     2 => "conscientiousness",
     3 => "extraversion",
     4 => "agreeableness",

@@ -2,7 +2,7 @@ class QuestionsController < ApplicationController
   before_action :authenticate_user!
 
   def ask_questions
-    if not_enough_time_passed
+    if not_enough_time_passed?
       flash[:notice] = "You must wait at least an hour before testing again."
       return redirect_to users_path
     end
@@ -10,15 +10,15 @@ class QuestionsController < ApplicationController
   end
 
   def submit_questions
-    if not_enough_time_passed
+    if not_enough_time_passed?
       flash[:notice] = "You must wait at least an hour before testing again."
       return redirect_to users_path
     end
-    all_qs = Question.where(user_id: current_user)
-    all_qs.delete_all if !all_qs.blank?
+    remove_previous_questions_and_answers
     @questions = Question::QUESTIONS_ENUM
     l = Question::QUESTIONS_ENUM.length
     token_response = get_watson_tone_token
+    cu_questions = []
     while l > 0 do
       q = ERB::Util.url_encode(params["question_#{l}"])
       tone_response = get_tone_response(token_response, q)
@@ -34,10 +34,11 @@ class QuestionsController < ApplicationController
         question[:language_tone_2] = Tone::LANGUAGE_ENUM.key(@language_tone_2)
         question[:social_tone_1] = Tone::SOCIAL_ENUM.key(@social_tone_1)
         question[:social_tone_2] = Tone::SOCIAL_ENUM.key(@social_tone_2)
-        begin
-          question.save!
-        rescue e
-          puts "RAILS_ERROR: #{e}"
+        if question.save
+          cu_questions << question
+        else
+          flash[:notice] = "Something went wrong. Please try again..."
+          return render "ask_questions"
         end
       else
         flash[:notice] = "Something went wrong. Please try again..."
@@ -45,13 +46,61 @@ class QuestionsController < ApplicationController
       end
       l -= 1
     end # end -> while l > 0 do
+    save_top_tone_answers(cu_questions)
     return redirect_to users_path
   end
 
-
   private
 
-  def not_enough_time_passed
+  def remove_previous_questions_and_answers
+    all_qs = Question.where(user_id: current_user.id)
+    all_qs.delete_all if !all_qs.blank?
+    top_answers = TopAnswer.where(user_id: current_user.id).first
+    top_answers.delete if !top_answers.nil?
+  end
+
+  def save_top_tone_answers(cu_questions)
+    els = group_tone_answers(cu_questions)
+    get_top_tone_answers(els[0], els[1], els[2])
+    top_answers = TopAnswer.new
+    top_answers[:user_id] = current_user[:id]
+    top_answers[:top_emotional_tone] = @e_top
+    top_answers[:top_language_tone] = @l_top
+    top_answers[:top_social_tone] = @s_top
+    begin
+      top_answers.save!
+    rescue
+      puts "RAILS_ERROR: Problem saving top_answers for #{current_user}"
+    end
+  end
+
+  def group_tone_answers(cu_questions)
+    e = []
+    l = []
+    s = []
+    cu_questions.each do |obj|
+      e << obj[:emotional_tone_1]
+      e << obj[:emotional_tone_2]
+      l << obj[:language_tone_1]
+      l << obj[:language_tone_2]
+      s << obj[:social_tone_1]
+      s << obj[:social_tone_2]
+    end
+    [e,l,s]
+  end
+
+  def get_top_tone_answers(e, l, s)
+    freq_e = e.inject(Hash.new(0)){|h, v| h[v] += 1; h}
+    @e_top = freq_e.max_by{|k,v| v}.first
+
+    freq_l = l.inject(Hash.new(0)){|h, v| h[v] += 1; h}
+    @l_top = freq_l.max_by{|k,v| v}.first
+
+    freq_s = s.inject(Hash.new(0)){|h, v| h[v] += 1; h}
+    @s_top = freq_s.max_by{|k,v| v}.first
+  end
+
+  def not_enough_time_passed?
     q1 = Question.where(user_id: current_user, question_id: 1).first
     return false if q1.nil?
     offset = Time.now - q1[:created_at]
@@ -83,7 +132,6 @@ class QuestionsController < ApplicationController
       agreeableness: 0,
       emotional_range: 0
     }
-
     response["sentences_tone"].each do |tc|
       tc["tone_categories"].each do |tn|
         tn["tones"].each do |t|
@@ -118,7 +166,6 @@ class QuestionsController < ApplicationController
         end # tn["tones"]
       end # tc["tone_categories"]
     end # response["sentence_tone"]
-
     get_winning_scores(emotional_scores, language_scores, social_scores)
   end
 

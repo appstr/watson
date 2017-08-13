@@ -7,4 +7,18 @@
       <%= link_to "Take the test!", ask_questions_path %>
     </div>
   </div>
+  <div class="row">
+    <% if @top_answer.nil? %>
+      <h6>Take the test to find matches!</h6>
+    <% elsif !@matches.blank? %>
+      <h6>Matches found...</h6>
+      <% @matches.each do |user| %>
+        <p><%= user.email %></p>
+        <button class="btn-md btn-primary">Send Message</button>
+        <br />
+      <% end %>
+    <% else %>
+      <h6>Unable to find matches :(</h6>
+    <% end %>
+  </div>
 </div>
