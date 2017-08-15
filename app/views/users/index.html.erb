@@ -14,7 +14,7 @@
       <h6>Matches found...</h6>
       <% @matches.each do |user| %>
         <p><%= user.email %></p>
-        <button class="btn-md btn-primary">Send Message</button>
+        <a type="button" href="<%= room_path(id: user.id) %>" class="btn-md btn-primary">Send Message</a>
         <br />
       <% end %>
     <% else %>

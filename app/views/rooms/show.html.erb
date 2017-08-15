@@ -1,0 +1,16 @@
+<h1>Chat Room</h1>
+<div id="messages">
+  <% if @messages.blank? %>
+    <div id="no_messages_yet">
+      <p>No messages yet...</p>
+    </div>
+  <% else %>
+      <%= render @messages %>
+  <% end %>
+</div>
+<form>
+  <label>Say something:</label><br>
+  <input type="text" data-behavior="room_speaker">
+  <input type="hidden" value="<%= @room[:id] %>" id="room_id" data-roomId="<%= @room[:id] %>">
+  <input type="hidden" value="<%= current_user[:id] %>" id="user_id">
+</form>
